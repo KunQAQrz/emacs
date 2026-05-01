@@ -162,6 +162,65 @@ extract_file() {
     print_info "解压完成！目录: $EMACS_DIR"
 }
 
+# ==================== 配置用户目录 ====================
+setup_user_config() {
+    # Windows上Emacs配置文件标准位置：%APPDATA%/.emacs.d/init.el
+    # %APPDATA% 通常指向 C:\Users\<用户名>\AppData\Roaming
+    
+    # 获取APPDATA目录
+    local APPDATA_DIR="$APPDATA"
+    if [[ -z "$APPDATA_DIR" ]]; then
+        # 如果APPDATA未设置，回退到用户目录
+        APPDATA_DIR="$USERPROFILE/AppData/Roaming"
+    fi
+    
+    # 构建Emacs配置目录路径
+    USER_EMACS_DIR="$APPDATA_DIR/.emacs.d"
+    
+    # 脚本目录中的emacs.d文件夹
+    local SOURCE_EMACS_DIR="$SCRIPT_DIR/emacs.d"
+    
+    # 清除旧的配置文件
+    print_info "清理用户目录中的旧配置..."
+    if [[ -d "$USER_EMACS_DIR" ]]; then
+        rm -rf "$USER_EMACS_DIR"
+        print_info "已删除旧配置目录: $USER_EMACS_DIR"
+    fi
+    
+    # 检查脚本目录中是否存在emacs.d文件夹
+    if [[ ! -d "$SOURCE_EMACS_DIR" ]]; then
+        print_error "未找到脚本目录中的 emacs.d 文件夹！"
+        print_error "请确保 $SOURCE_EMACS_DIR 存在"
+        exit 1
+    fi
+    
+    # 创建新的配置目录
+    mkdir -p "$USER_EMACS_DIR"
+    
+    # 将脚本目录的emacs.d文件夹内容复制到用户配置目录
+    print_info "$SOURCE_EMACS_DIR -> $USER_EMACS_DIR"
+    cp -r "$SOURCE_EMACS_DIR/"* "$USER_EMACS_DIR/"
+    
+    if [[ -d "$USER_EMACS_DIR" ]]; then
+        print_info "配置文件复制完成！"
+    else
+        print_error "复制配置文件失败！"
+        exit 1
+    fi
+
+    # 复制脚本目录下的 custom.el 到用户主目录为 .custom.el
+    local SOURCE_CUSTOM_EL="$SCRIPT_DIR/custom.el"
+
+    if [[ -f "$SOURCE_CUSTOM_EL" ]]; then
+        local TARGET_CUSTOM_EL="$APPDATA_DIR/.custom.el"
+        print_info "复制用户配置: $SOURCE_CUSTOM_EL -> $TARGET_CUSTOM_EL"
+        cp "$SOURCE_CUSTOM_EL" "$TARGET_CUSTOM_EL"
+        print_info "用户配置复制完成！"
+    else
+        print_warn "未找到脚本目录中的 custom.el 文件，跳过此步骤"
+    fi
+}
+
 # ==================== 完成提示 ====================
 show_completion() {
     print_color ""
@@ -182,6 +241,7 @@ main() {
     cleanup_old
     download_file
     extract_file
+    setup_user_config
     show_completion
 }
 
